@@ -23,19 +23,26 @@ const EmployeeForm = () => {
     leavingDate: '',
     password: '',
     confirmPassword: '',
+    role: 'employee',
   });
 
   useEffect(() => {
     if (id) {
       const fetchEmployee = async () => {
         try {
-          const response = await axios.get(`/api/employees/${id}`);
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`http://localhost:5000/api/employees/${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
           const fetchedEmployee = response.data;
-          // Ensure password fields are empty when editing (for security)
           setEmployee({
             ...fetchedEmployee,
             password: '',
             confirmPassword: '',
+            joinDate: fetchedEmployee.joinDate ? new Date(fetchedEmployee.joinDate).toISOString().split('T')[0] : '',
+            leavingDate: fetchedEmployee.leavingDate ? new Date(fetchedEmployee.leavingDate).toISOString().split('T')[0] : '',
           });
         } catch (error) {
           console.error('Error fetching employee:', error);
@@ -49,7 +56,6 @@ const EmployeeForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEmployee((prev) => ({ ...prev, [name]: value }));
-    // Clear error for the field being edited
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -71,14 +77,8 @@ const EmployeeForm = () => {
       newErrors.phone = 'Phone Number must be 10 digits';
     }
     if (!id) {
-      // Password validation only for new employees
       if (!employee.password) {
         newErrors.password = 'Password is required';
-      } else if (
-        !/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(employee.password)
-      ) {
-        newErrors.password =
-          'Password must be at least 8 characters long and include at least one uppercase letter, one number, and one special character';
       }
       if (employee.password !== employee.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
@@ -98,17 +98,27 @@ const EmployeeForm = () => {
 
     setLoading(true);
     try {
-      const employeeData = { ...employee };
-      // Remove confirmPassword from the data sent to the backend
+      const token = localStorage.getItem('token');
+      const employeeData = {
+        ...employee,
+        joinDate: employee.joinDate ? new Date(employee.joinDate).toISOString() : null,
+        leavingDate: employee.leavingDate ? new Date(employee.leavingDate).toISOString() : null,
+      };
       delete employeeData.confirmPassword;
 
       if (id) {
-        // Update existing employee
-        await axios.put(`/api/employees/${id}`, employeeData);
+        await axios.put(`http://localhost:5000/api/employees/${id}`, employeeData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         toast.success('Employee updated successfully!');
       } else {
-        // Add new employee
-        await axios.post('/api/employees', employeeData);
+        await axios.post('http://localhost:5000/api/employees', employeeData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         toast.success('Employee added successfully!');
       }
       navigate('/admin/employees');

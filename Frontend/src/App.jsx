@@ -1,28 +1,23 @@
-import React, { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import AppContextProvider from './context/AppContext';
+import AppAuth from './Auth/AppAuth';
+import EmployeePanel from './Pages/EmployeePanel'; 
+import AdminDashboard from './Pages/AdminPanel';
+import AdminForm from './Pages/AdminForm';
 
-import Login from "./Auth/AppAuth";
-
-import Hero from './pages/Hero';
-import AdminPanel from './pages/AdminPanel';
-import AdminForm from './pages/AdminForm';
-import EmployeePanel from './pages/EmployeePanel';
-
-
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
-        <ToastContainer />
-      <Routes>
-            {/* Auth Pages */}
-          <Route path="/" element={<Hero />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin/dashboard" element={<AdminPanel />} />
-          <Route path="/admin/employees" element={<AdminForm />} />   
-          <Route path="/employees" element={<EmployeePanel />} />           
-      </Routes>
-    </BrowserRouter>
+    <AppContextProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<AppAuth />} />
+          <Route path="/admin/employees" element={<AdminForm />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/employees" element={<EmployeePanel />} />
+        </Routes>
+      </Router>
+    </AppContextProvider>
   );
 }
+
+export default App;
