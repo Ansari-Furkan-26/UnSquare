@@ -11,6 +11,11 @@ export default defineConfig({
     outDir: 'dist', // This is the default. Ensure it's not changed to something else.
     chunkSizeWarningLimit: 1000, // Increase the limit as needed (default is 500 KB)
   },
+  server: {
+  proxy: {
+    '/api': 'http://localhost:5000'
+  }
+  },
   resolve: {
     alias: {
       '@tailwindConfig': path.resolve(__dirname, './tailwind.config.js'),
