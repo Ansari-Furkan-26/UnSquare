@@ -42,7 +42,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden mt-8">
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
       <div className="bg-blue-600 p-6 text-white">
         <h1 className="text-2xl font-bold">{user.name}</h1>
         <p className="text-blue-100">{user.position} - {user.department}</p>

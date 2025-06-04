@@ -2,319 +2,335 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const AttendanceAction = ({ employee }) => {
-  const [currentStatus, setCurrentStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [location, setLocation] = useState(null);
-  const [error, setError] = useState(null);
-  const [todayAttendance, setTodayAttendance] = useState(null);
-  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [workLocation] = useState({
-    latitude: 19.0760, // Mumbai coordinates (example)
-    longitude: 72.8777,
-    radius: 0.5, // 0.5km radius
+const EmployeeAttendance = ({ employee }) => {
+  const [attendanceData, setAttendanceData] = useState({
+    today: null,
+    weekly: []
   });
+  const [loading, setLoading] = useState({
+    checkIn: false,
+    checkOut: false,
+    data: true
+  });
+  const [motivatingMessage, setMotivatingMessage] = useState(null);
 
-  // Guard clause: If employee or employeeId is undefined, show a fallback UI
-  if (!employee || !employee.employeeId) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto text-center text-gray-500">
-        Loading employee data...
-      </div>
-    );
-  }
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  // Calculate total hours worked between check-in and check-out
-  const calculateHoursWorked = (checkIn, checkOut) => {
-    if (!checkIn || !checkOut) return 0;
-    const diffMs = new Date(checkOut) - new Date(checkIn);
-    return (diffMs / (1000 * 60 * 60)).toFixed(2); // Convert to hours with 2 decimal places
+  const getWeekDates = () => {
+    const today = new Date();
+    const result = [];
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 0);
+    const monday = new Date(today.setDate(diff));
+    
+    for (let i = 0; i < 7; i++) {
+      const newDate = new Date(monday);
+      newDate.setDate(monday.getDate() + i);
+      result.push(newDate);
+    }
+    
+    return result;
   };
 
-  // Get Monday of the current week
-  const getMonday = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-    return new Date(d.setDate(diff));
+  const getStatusColor = (record) => {
+    if (!record) return 'bg-gray-100';
+
+    const grade = record.grade || 0;
+
+    if (grade >= 90) return 'bg-green-400';
+    if (grade >= 70) return 'bg-green-300';
+    if (grade >= 50) return 'bg-yellow-400';
+    if (grade >= 30) return 'bg-orange-400';
+    return 'bg-red-400';
   };
 
-  // Check today's attendance status on load
-  useEffect(() => {
-    const fetchTodayAttendance = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const response = await axios.get(`/api/attendance/today/${employee.employeeId}?date=${today}`);
-        setTodayAttendance(response.data);
-        if (response.data.checkIn && !response.data.checkOut) {
-          setCurrentStatus('checkedIn');
-        } else if (response.data.checkOut) {
-          setCurrentStatus('checkedOut');
-        }
-      } catch (err) {
-        console.error('Error fetching attendance:', err);
-      }
-    };
-    fetchTodayAttendance();
-  }, [employee.employeeId]);
-
-  // Fetch weekly attendance for the current week on load
-  useEffect(() => {
-    const fetchWeeklyAttendance = async () => {
-      try {
-        const monday = getMonday(new Date()).toISOString().split('T')[0];
-        const response = await axios.get(`/api/attendance/weekly/${employee.employeeId}?startDate=${monday}`);
-        setWeeklyAttendance(response.data);
-      } catch (err) {
-        console.error('Error fetching weekly attendance:', err);
-      }
-    };
-    fetchWeeklyAttendance();
-  }, [employee.employeeId]);
-
-  // Fetch monthly attendance when month or year changes
-  useEffect(() => {
-    const fetchMonthlyAttendance = async () => {
-      try {
-        const response = await axios.get(`/api/attendance/monthly`, {
-          params: { employeeId: employee.employeeId, year: selectedYear, month: selectedMonth },
-        });
-        setWeeklyAttendance(response.data);
-      } catch (err) {
-        console.error('Error fetching monthly attendance:', err);
-      }
-    };
-    fetchMonthlyAttendance();
-  }, [employee.employeeId, selectedMonth, selectedYear]);
-
-  // Get current location
-  const getLocation = () => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
+  const fetchAttendanceData = async () => {
+    if (!employee?.employeeId) {
+      console.error('Employee ID is missing. Cannot fetch attendance data.');
+      toast.error('Employee data is missing. Please log in again.');
+      setLoading(prev => ({ ...prev, data: false }));
       return;
     }
 
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        setError('Unable to retrieve your location');
-        setLoading(false);
-      }
-    );
-  };
+    console.log('Fetching attendance data for employee:', employee.employeeId);
+    try {
+      setLoading(prev => ({ ...prev, data: true }));
+      const token = localStorage.getItem('token');
+      console.log('Token:', token);
 
-  // Calculate distance between two coordinates (Haversine formula)
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
+      const todayResponse = await axios.get(`/api/attendance/today/${employee.employeeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Today response:', todayResponse.data);
+
+      const monday = getWeekDates()[0].toISOString().split('T')[0];
+      const weeklyResponse = await axios.get(`/api/attendance/weekly/${employee.employeeId}?startDate=${monday}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Weekly response:', weeklyResponse.data);
+
+      setAttendanceData({
+        today: todayResponse.data,
+        weekly: weeklyResponse.data
+      });
+    } catch (error) {
+      console.error('Error fetching attendance data:', error.response?.data || error.message);
+      toast.error('Failed to fetch attendance data');
+    } finally {
+      setLoading(prev => ({ ...prev, data: false }));
+    }
   };
 
   const handleCheckIn = async () => {
-    getLocation();
-
-    if (!location) {
-      setTimeout(() => {
-        if (!location) {
-          toast.error('Please enable location services');
-          return;
-        }
-        proceedWithCheckIn();
-      }, 1000);
+    if (!employee?.employeeId) {
+      console.error('Employee ID is missing. Cannot check in.');
+      toast.error('Employee data is missing. Please log in again.');
       return;
     }
 
-    proceedWithCheckIn();
-  };
-
-  const proceedWithCheckIn = async () => {
-    const distance = calculateDistance(
-      location.latitude,
-      location.longitude,
-      workLocation.latitude,
-      workLocation.longitude
-    );
-
-    if (distance > workLocation.radius) {
-      toast.error(`You must be within ${workLocation.radius}km of the workplace to check in`);
-      return;
-    }
-
+    console.log('Check In button clicked for employee:', employee.employeeId);
     try {
-      setLoading(true);
+      setLoading(prev => ({ ...prev, checkIn: true }));
+      const token = localStorage.getItem('token');
+      console.log('Token for check-in:', token);
+
       const response = await axios.post('/api/attendance/checkin', {
-        employeeId: employee.employeeId,
-        latitude: location.latitude,
-        longitude: location.longitude,
+        employeeId: employee.employeeId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setCurrentStatus('checkedIn');
-      setTodayAttendance(response.data.attendance);
-      toast.success('Checked in successfully!');
-    } catch (err) {
-      toast.error('Error checking in: ' + (err.response?.data?.message || err.message));
+      console.log('Check-in response:', response.data);
+
+      setAttendanceData(prev => ({
+        ...prev,
+        today: response.data
+      }));
+      
+      toast.success(`Checked in at ${new Date(response.data.checkIn.time).toLocaleTimeString()}`);
+    } catch (error) {
+      console.error('Check-in error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.message || error.message);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, checkIn: false }));
     }
   };
 
   const handleCheckOut = async () => {
+    if (!employee?.employeeId) {
+      console.error('Employee ID is missing. Cannot check out.');
+      toast.error('Employee data is missing. Please log in again.');
+      return;
+    }
+
+    console.log('Check Out button clicked for employee:', employee.employeeId);
     try {
-      setLoading(true);
+      setLoading(prev => ({ ...prev, checkOut: true }));
+      const token = localStorage.getItem('token');
+      console.log('Token for check-out:', token);
+
       const response = await axios.post('/api/attendance/checkout', {
-        employeeId: employee.employeeId,
+        employeeId: employee.employeeId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      setCurrentStatus('checkedOut');
-      setTodayAttendance(response.data.attendance);
-      toast.success('Checked out successfully!');
-    } catch (err) {
-      toast.error('Error checking out: ' + (err.response?.data?.message || err.message));
+      console.log('Check-out response:', response.data);
+
+      setAttendanceData(prev => ({
+        ...prev,
+        today: response.data,
+        weekly: prev.weekly.map(record => 
+          record.date === response.data.date ? response.data : record
+        )
+      }));
+      
+      toast.success(`Checked out at ${new Date(response.data.checkOut.time).toLocaleTimeString()}`);
+      setMotivatingMessage('Great job today! See you tomorrow! 🌟');
+    } catch (error) {
+      console.error('Check-out error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.message || error.message);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, checkOut: false }));
     }
   };
 
-  // Generate month and year options
-  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
-  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [employee]);
+
+  if (!employee?.employeeId) {
+    return <div className="text-center p-4 text-red-500">Employee data is missing. Please log in again.</div>;
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Daily Attendance</h2>
-
-      <div className="space-y-6">
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-            <p>{error}</p>
+    <div className="max-w-6xl mx-auto p-2 sm:p-4 space-y-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Today's Attendance</h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm sm:text-base">Status</h3>
+            <p className="text-base sm:text-lg">
+              {attendanceData.today?.status 
+                ? (
+                  <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+                    attendanceData.today.status === 'present' ? 'bg-green-100 text-green-800' :
+                    attendanceData.today.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {attendanceData.today.status}
+                  </span>
+                )
+                : 'Not checked in'}
+            </p>
           </div>
-        )}
+          
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm sm:text-base">Check-in</h3>
+            <p className="text-base sm:text-lg">
+              {attendanceData.today?.checkIn 
+                ? new Date(attendanceData.today.checkIn.time).toLocaleTimeString()
+                : '--:--'}
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm sm:text-base">Check-out</h3>
+            <p className="text-base sm:text-lg">
+              {attendanceData.today?.checkOut?.time 
+                ? new Date(attendanceData.today.checkOut.time).toLocaleTimeString()
+                : '--:--'}
+            </p>
+          </div>
 
-        {/* Today's Attendance */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Today ({new Date().toLocaleDateString()})</h3>
-          {todayAttendance?.checkIn && (
-            <div className="bg-blue-50 p-3 rounded-lg mb-2">
-              <p className="font-medium">Check-in Time:</p>
-              <p>{new Date(todayAttendance.checkIn.time).toLocaleTimeString()}</p>
-            </div>
-          )}
-          {todayAttendance?.checkOut && (
-            <div className="bg-green-50 p-3 rounded-lg mb-2">
-              <p className="font-medium">Check-out Time:</p>
-              <p>{new Date(todayAttendance.checkOut.time).toLocaleTimeString()}</p>
-            </div>
-          )}
-          {todayAttendance?.checkIn && todayAttendance?.checkOut && (
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <p className="font-medium">Total Hours Worked:</p>
-              <p>{calculateHoursWorked(todayAttendance.checkIn.time, todayAttendance.checkOut.time)} hours</p>
-            </div>
-          )}
-          {!todayAttendance?.checkIn && (
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm sm:text-base">Time Spent</h3>
+            <p className="text-base sm:text-lg">
+              {attendanceData.today?.totalTimeSpent 
+                ? `${Math.floor(attendanceData.today.totalTimeSpent / 60)}h ${attendanceData.today.totalTimeSpent % 60}m`
+                : '--:--'}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+          {!attendanceData.today?.checkIn ? (
             <button
               onClick={handleCheckIn}
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 mt-4"
+              disabled={loading.checkIn || !employee?.employeeId}
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center text-sm sm:text-base"
             >
-              {loading ? 'Verifying Location...' : 'Check In'}
+              {loading.checkIn ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </>
+              ) : 'Check In'}
             </button>
-          )}
-          {todayAttendance?.checkIn && !todayAttendance?.checkOut && (
+          ) : !attendanceData.today?.checkOut?.time ? (
             <button
               onClick={handleCheckOut}
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 mt-4"
+              disabled={loading.checkOut || !employee?.employeeId}
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center text-sm sm:text-base"
             >
-              {loading ? 'Processing...' : 'Check Out'}
+              {loading.checkOut ? 'Processing...' : 'Check Out'}
             </button>
-          )}
-        </div>
-
-        {/* Filter by Month and Year */}
-        <div className="flex space-x-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Month</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            >
-              {monthOptions.map((month) => (
-                <option key={month} value={month}>
-                  {new Date(0, month - 1).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Year</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Weekly/Historical Attendance */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Attendance History</h3>
-          {weeklyAttendance.length === 0 ? (
-            <p className="text-gray-500">No attendance records found.</p>
           ) : (
-            <div className="space-y-4">
-              {weeklyAttendance.map((record) => (
-                <div key={record._id} className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-medium">
-                    Date: {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
-                  {record.checkIn && (
-                    <p>Check-in: {new Date(record.checkIn.time).toLocaleTimeString()}</p>
-                  )}
-                  {record.checkOut && (
-                    <p>Check-out: {new Date(record.checkOut.time).toLocaleTimeString()}</p>
-                  )}
-                  {record.checkIn && record.checkOut && (
-                    <p>Total Hours: {calculateHoursWorked(record.checkIn.time, record.checkOut.time)} hours</p>
-                  )}
-                </div>
-              ))}
+            <div className="text-center w-full sm:w-auto">
+              <p className="text-gray-500 text-sm sm:text-base">Attendance completed for today</p>
+              {motivatingMessage && (
+                <p className="text-green-600 font-medium mt-2 text-sm sm:text-base">{motivatingMessage}</p>
+              )}
             </div>
           )}
         </div>
+      </div>
 
-        {/* Location Info */}
-        {location && (
-          <div className="text-sm text-gray-600 mt-4">
-            <p>Your location: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p>
-            <p>Work location: {workLocation.latitude}, {workLocation.longitude}</p>
-          </div>
-        )}
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Weekly Attendance</h2>
+      <p className="text-xs sm:text-sm text-gray-500 mb-4">
+  Color grades show punctuality:&nbsp;
+  <span className="inline-flex items-center mr-2">
+    <span className="w-2 h-2 rounded-full bg-green-500 mr-1"></span>On Time
+  </span>
+  <span className="inline-flex items-center mr-2">
+    <span className="w-2 h-2 rounded-full bg-yellow-400 mr-1"></span>Late
+  </span>
+  <span className="inline-flex items-center">
+    <span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span>Absent
+  </span>
+</p>
+
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-[700px] divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {weekdays.map((day, index) => {
+                  const date = getWeekDates()[index];
+                  return (
+                    <th 
+                      key={index}
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] sm:text-xs">{day.slice(0, 3)}</span>
+                        <span className="font-normal text-[10px] sm:text-xs">{date.getDate()}/{date.getMonth()+1}</span>
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              <tr>
+                {getWeekDates().map((date, index) => {
+                  const dateStr = date.toISOString().split('T')[0];
+                  const record = attendanceData.weekly.find(d => 
+                    new Date(d.date).toISOString().split('T')[0] === dateStr
+                  );
+                  const isToday = new Date().toDateString() === date.toDateString();
+                  const colorClass = getStatusColor(record);
+                  
+                  return (
+                    <td 
+                      key={index} 
+                      className={`px-2 sm:px-4 py-3 sm:py-4 whitespace-nowrap ${isToday ? 'border-2 border-blue-500' : ''}`}
+                    >
+                      <div className={`${colorClass} p-2 sm:p-3 rounded-lg text-center text-[10px] sm:text-xs`}>
+                        {record ? (
+                          <>
+                            <p className="font-medium">
+                              {record.checkIn ? new Date(record.checkIn.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                            </p>
+                            <p>
+                              {record.checkOut?.time ? new Date(record.checkOut.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                            </p>
+                            <p className="mt-1 font-medium">
+                              {record.status} (Grade: {record.grade})
+                            </p>
+                            {record.totalTimeSpent && (
+                              <p className="mt-1">
+                                Time: {Math.floor(record.totalTimeSpent / 60)}h {record.totalTimeSpent % 60}m
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-gray-600">No record</p>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AttendanceAction;
+export default EmployeeAttendance;

@@ -44,18 +44,39 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// Attendance Schema
+const attendanceSchema = new mongoose.Schema({
+  employeeId: { type: String, required: true },
+  date: { type: String, required: true },
+  checkIn: {
+    time: Date,
+    location: {
+      latitude: Number,
+      longitude: Number
+    }
+  },
+  checkOut: {
+    time: Date
+  },
+  totalTimeSpent: { type: Number, default: 0 },
+  status: { type: String, enum: ['present', 'late', 'absent'], default: 'absent' },
+  grade: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
-// Middleware to verify JWT token (for protected routes)
+// Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
-  // Bypass verification for admin-token
   if (token === 'admin-token') {
-    req.user = { userId: 'admin-id', role: 'admin' }; // Mock user data for admin
+    req.user = { userId: 'admin-id', role: 'admin' };
     return next();
   }
   try {
@@ -65,6 +86,31 @@ const verifyToken = (req, res, next) => {
   } catch (error) {
     res.status(401).json({ message: 'Invalid token' });
   }
+};
+
+// Calculate punctuality grade
+const calculatePunctualityGrade = (checkInTime, checkOutTime) => {
+  let grade = 100;
+
+  const expectedCheckIn = new Date(checkInTime);
+  expectedCheckIn.setHours(9, 30, 0, 0);
+
+  const expectedCheckOut = new Date(checkInTime);
+  expectedCheckOut.setHours(18, 0, 0, 0);
+
+  if (checkInTime) {
+    const minutesLate = (new Date(checkInTime) - expectedCheckIn) / (1000 * 60);
+    if (minutesLate > 15) grade -= 30;
+    if (minutesLate > 30) grade -= 20;
+  }
+
+  if (checkOutTime) {
+    const minutesEarly = (expectedCheckOut - new Date(checkOutTime)) / (1000 * 60);
+    if (minutesEarly > 15) grade -= 20;
+    if (minutesEarly > 30) grade -= 20;
+  }
+
+  return Math.max(0, Math.min(100, grade));
 };
 
 // Add New Employee
@@ -154,7 +200,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Profile Route (to fetch logged-in user details)
+// Profile Route
 app.get('/api/auth/profile', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
@@ -165,6 +211,140 @@ app.get('/api/auth/profile', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
+// Attendance Routes
+
+// GET Today's Attendance
+app.get('/api/attendance/today/:employeeId', verifyToken, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const today = new Date().toISOString().split('T')[0];
+    const attendance = await Attendance.findOne({ employeeId, date: today });
+
+    if (!attendance) {
+      return res.json(null);
+    }
+
+    res.json(attendance);
+  } catch (error) {
+    console.error('Error fetching today\'s attendance:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET Weekly Attendance
+app.get('/api/attendance/weekly/:employeeId', verifyToken, async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { startDate } = req.query;
+
+    if (!startDate) {
+      return res.status(400).json({ message: 'Start date is required' });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const weeklyAttendance = await Attendance.find({
+      employeeId,
+      date: {
+        $gte: start.toISOString().split('T')[0],
+        $lte: end.toISOString().split('T')[0]
+      }
+    }).sort({ date: 1 });
+
+    res.json(weeklyAttendance);
+  } catch (error) {
+    console.error('Error fetching weekly attendance:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST Check-In
+app.post('/api/attendance/checkin', verifyToken, async (req, res) => {
+  try {
+    const { employeeId, location } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ message: 'Employee ID is required' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    let attendance = await Attendance.findOne({ employeeId, date: today });
+
+    if (attendance && attendance.checkIn) {
+      return res.status(400).json({ message: 'Already checked in today' });
+    }
+
+    if (!attendance) {
+      attendance = new Attendance({
+        employeeId,
+        date: today
+      });
+    }
+
+    const checkInTime = new Date();
+    attendance.checkIn = {
+      time: checkInTime,
+      location: location ? {
+        latitude: location.latitude,
+        longitude: location.longitude
+      } : undefined
+    };
+
+    const expectedCheckIn = new Date(checkInTime);
+    expectedCheckIn.setHours(9, 30, 0, 0);
+    const minutesLate = (checkInTime - expectedCheckIn) / (1000 * 60);
+    attendance.status = minutesLate > 15 ? 'late' : 'present';
+
+    attendance.grade = calculatePunctualityGrade(checkInTime, null);
+
+    await attendance.save();
+    console.log('Check-in saved:', attendance);
+    res.json(attendance);
+  } catch (error) {
+    console.error('Error during check-in:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
+  }
+});
+
+// POST Check-Out
+app.post('/api/attendance/checkout', verifyToken, async (req, res) => {
+  try {
+    const { employeeId } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ message: 'Employee ID is required' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const attendance = await Attendance.findOne({ employeeId, date: today });
+
+    if (!attendance || !attendance.checkIn) {
+      return res.status(400).json({ message: 'Must check in before checking out' });
+    }
+
+    if (attendance.checkOut?.time) {
+      return res.status(400).json({ message: 'Already checked out today' });
+    }
+
+    const checkOutTime = new Date();
+    attendance.checkOut = { time: checkOutTime };
+
+    const timeSpent = (checkOutTime - new Date(attendance.checkIn.time)) / (1000 * 60);
+    attendance.totalTimeSpent = Math.round(timeSpent);
+
+    attendance.grade = calculatePunctualityGrade(attendance.checkIn.time, checkOutTime);
+
+    await attendance.save();
+    console.log('Check-out saved:', attendance);
+    res.json(attendance);
+  } catch (error) {
+    console.error('Error during check-out:', error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 
