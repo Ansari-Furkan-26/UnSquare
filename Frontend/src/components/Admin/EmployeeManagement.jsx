@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { FaEdit, FaTrash, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -28,10 +28,21 @@ const EmployeeManagement = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get('/api/employees');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('Please log in to access this page');
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.get('/api/employees', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const data = response.data;
         const employeeList = Array.isArray(data)
           ? data
@@ -41,8 +52,13 @@ const EmployeeManagement = () => {
 
         setEmployees(employeeList);
       } catch (error) {
-        console.error('Error fetching employees:', error);
-        toast.error('Failed to fetch employees');
+        console.error('Error fetching employees:', error.response?.data || error.message);
+        const errorMessage = error.response?.data?.message || 'Failed to fetch employees';
+        toast.error(errorMessage);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
         setEmployees([]);
       } finally {
         setLoading(false);
@@ -50,17 +66,25 @@ const EmployeeManagement = () => {
     };
 
     fetchEmployees();
-  }, []);
+  }, [navigate]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
       try {
-        await axios.delete(`/api/employees/${id}`);
+        const token = localStorage.getItem('token');
+        await axios.delete(`/api/employees/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setEmployees(employees.filter((emp) => emp._id !== id));
         toast.success('Employee deleted successfully!');
       } catch (error) {
-        console.error('Error deleting employee:', error);
-        toast.error('Failed to delete employee');
+        console.error('Error deleting employee:', error.response?.data || error.message);
+        const errorMessage = error.response?.data?.message || 'Failed to delete employee';
+        toast.error(errorMessage);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
       }
     }
   };
@@ -160,14 +184,16 @@ const EmployeeManagement = () => {
 
     setFormLoading(true);
     try {
+      const token = localStorage.getItem('token');
       const employeeData = { ...formData };
-      // Remove confirmPassword and password if not provided (to avoid overwriting)
       delete employeeData.confirmPassword;
       if (!employeeData.password) {
         delete employeeData.password;
       }
 
-      const response = await axios.put(`/api/employees/${selectedEmployee._id}`, employeeData);
+      const response = await axios.put(`/api/employees/${selectedEmployee._id}`, employeeData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setEmployees(
         employees.map((emp) =>
           emp._id === selectedEmployee._id ? response.data : emp
@@ -179,6 +205,10 @@ const EmployeeManagement = () => {
       console.error('Error updating employee:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.message || 'Failed to update employee';
       toast.error(errorMessage);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     } finally {
       setFormLoading(false);
     }

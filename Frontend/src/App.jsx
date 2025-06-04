@@ -1,4 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; // required styling
+
 import AppContextProvider from './context/AppContext';
 import AppAuth from './Auth/AppAuth';
 import EmployeePanel from './Pages/EmployeePanel'; 
@@ -18,6 +21,9 @@ function App() {
           <Route path="/employees" element={<EmployeePanel />} />
         </Routes>
       </Router>
+
+      {/* ToastContainer goes outside Router but inside context/provider */}
+      <ToastContainer/>
     </AppContextProvider>
   );
 }

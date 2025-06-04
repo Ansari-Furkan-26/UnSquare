@@ -52,13 +52,20 @@ const attendanceSchema = new mongoose.Schema({
     time: Date,
     location: {
       latitude: Number,
-      longitude: Number
+      longitude: Number,
+      city: String
     }
   },
   checkOut: {
-    time: Date
+    time: Date,
+    location: {
+      latitude: Number,
+      longitude: Number,
+      city: String
+    }
   },
-  status: { type: String, enum: ['present', 'late', 'absent'], default: 'absent' },
+  totalTimeSpent: { type: Number, default: 0 },
+  status: { type: String, enum: ['present', 'absent'], default: 'absent' },
   grade: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
@@ -87,6 +94,14 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// Middleware to verify admin role
+const verifyAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+};
+
 // Calculate punctuality grade
 const calculatePunctualityGrade = (checkInTime, checkOutTime) => {
   let grade = 100;
@@ -112,8 +127,19 @@ const calculatePunctualityGrade = (checkInTime, checkOutTime) => {
   return Math.max(0, Math.min(100, grade));
 };
 
+// GET All Employees (Admin Only)
+app.get('/api/employees', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const employees = await User.find().select('-password');
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Add New Employee
-app.post('/api/employees', verifyToken, async (req, res) => {
+app.post('/api/employees', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const userData = req.body;
     userData.role = userData.role || 'employee';
@@ -137,6 +163,64 @@ app.get('/api/employees/:id', verifyToken, async (req, res) => {
     res.json(user);
   } catch (error) {
     console.error('Error fetching employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Employee by ID (Admin Only)
+app.put('/api/employees/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    Object.assign(user, updatedData);
+    await user.save();
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating employee:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete Employee by ID (Admin Only)
+app.delete('/api/employees/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndDelete(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET Attendance for All Employees in Date Range (Admin Only)
+app.get('/api/attendance/range', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'Start date and end date are required' });
+    }
+
+    const attendanceRecords = await Attendance.find({
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    }).sort({ date: 1 });
+
+    res.json(attendanceRecords);
+  } catch (error) {
+    console.error('Error fetching attendance range:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -213,8 +297,6 @@ app.get('/api/auth/profile', verifyToken, async (req, res) => {
   }
 });
 
-// Attendance Routes
-
 // GET Today's Attendance
 app.get('/api/attendance/today/:employeeId', verifyToken, async (req, res) => {
   try {
@@ -271,6 +353,14 @@ app.post('/api/attendance/checkin', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
+    if (!location || !location.latitude || !location.longitude || !location.city) {
+      return res.status(400).json({ message: 'Location data (latitude, longitude, city) is required' });
+    }
+
+    if (location.city.toLowerCase() !== 'mumbai') {
+      return res.status(403).json({ message: 'Check-in is only allowed in Mumbai' });
+    }
+
     const today = new Date().toISOString().split('T')[0];
     let attendance = await Attendance.findOne({ employeeId, date: today });
 
@@ -288,16 +378,14 @@ app.post('/api/attendance/checkin', verifyToken, async (req, res) => {
     const checkInTime = new Date();
     attendance.checkIn = {
       time: checkInTime,
-      location: location ? {
+      location: {
         latitude: location.latitude,
-        longitude: location.longitude
-      } : undefined
+        longitude: location.longitude,
+        city: location.city
+      }
     };
 
-    const expectedCheckIn = new Date(checkInTime);
-    expectedCheckIn.setHours(9, 30, 0, 0);
-    const minutesLate = (checkInTime - expectedCheckIn) / (1000 * 60);
-    attendance.status = minutesLate > 15 ? 'late' : 'present';
+    attendance.status = 'present';
 
     attendance.grade = calculatePunctualityGrade(checkInTime, null);
 
@@ -313,10 +401,18 @@ app.post('/api/attendance/checkin', verifyToken, async (req, res) => {
 // POST Check-Out
 app.post('/api/attendance/checkout', verifyToken, async (req, res) => {
   try {
-    const { employeeId } = req.body;
+    const { employeeId, location } = req.body;
 
     if (!employeeId) {
       return res.status(400).json({ message: 'Employee ID is required' });
+    }
+
+    if (!location || !location.latitude || !location.longitude || !location.city) {
+      return res.status(400).json({ message: 'Location data (latitude, longitude, city) is required' });
+    }
+
+    if (location.city.toLowerCase() !== 'mumbai') {
+      return res.status(403).json({ message: 'Check-out is only allowed in Mumbai' });
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -331,8 +427,23 @@ app.post('/api/attendance/checkout', verifyToken, async (req, res) => {
     }
 
     const checkOutTime = new Date();
-    attendance.checkOut = { time: checkOutTime };
+    console.log('Check-in time (raw):', attendance.checkIn.time);
+    console.log('Check-out time (raw):', checkOutTime);
+    const timeDiffMs = checkOutTime.getTime() - new Date(attendance.checkIn.time).getTime();
+    console.log('Time difference (ms):', timeDiffMs);
+    const timeSpent = timeDiffMs / (1000 * 60);
+    console.log('Time spent (minutes):', timeSpent);
 
+    attendance.checkOut = {
+      time: checkOutTime,
+      location: {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        city: location.city
+      }
+    };
+
+    attendance.totalTimeSpent = Math.round(timeSpent);
     attendance.grade = calculatePunctualityGrade(attendance.checkIn.time, checkOutTime);
 
     await attendance.save();
