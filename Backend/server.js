@@ -58,7 +58,6 @@ const attendanceSchema = new mongoose.Schema({
   checkOut: {
     time: Date
   },
-  totalTimeSpent: { type: Number, default: 0 },
   status: { type: String, enum: ['present', 'late', 'absent'], default: 'absent' },
   grade: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
@@ -333,9 +332,6 @@ app.post('/api/attendance/checkout', verifyToken, async (req, res) => {
 
     const checkOutTime = new Date();
     attendance.checkOut = { time: checkOutTime };
-
-    const timeSpent = (checkOutTime - new Date(attendance.checkIn.time)) / (1000 * 60);
-    attendance.totalTimeSpent = Math.round(timeSpent);
 
     attendance.grade = calculatePunctualityGrade(attendance.checkIn.time, checkOutTime);
 

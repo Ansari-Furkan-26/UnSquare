@@ -10,7 +10,8 @@ const EmployeeAttendance = ({ employee }) => {
   const [loading, setLoading] = useState({
     checkIn: false,
     checkOut: false,
-    data: true
+    data: true,
+    location: false
   });
   const [motivatingMessage, setMotivatingMessage] = useState(null);
 
@@ -42,6 +43,36 @@ const EmployeeAttendance = ({ employee }) => {
     if (grade >= 50) return 'bg-yellow-400';
     if (grade >= 30) return 'bg-orange-400';
     return 'bg-red-400';
+  };
+
+  const fetchLocation = async () => {
+    try {
+      setLoading(prev => ({ ...prev, location: true }));
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      console.log('User location:', { latitude, longitude });
+
+      // Reverse geocode using Nominatim API
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
+      );
+      const city = response.data.address?.city || response.data.address?.town || 'Unknown';
+      console.log('Geocoding result:', response.data, 'City:', city);
+
+      return { latitude, longitude, city };
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      throw new Error('Unable to fetch location. Please allow location access and try again.');
+    } finally {
+      setLoading(prev => ({ ...prev, location: false }));
+    }
   };
 
   const fetchAttendanceData = async () => {
@@ -88,14 +119,18 @@ const EmployeeAttendance = ({ employee }) => {
       return;
     }
 
-    console.log('Check In button clicked for employee:', employee.employeeId);
     try {
+      // Fetch location first
+      const location = await fetchLocation();
+
+      console.log('Check In button clicked for employee:', employee.employeeId);
       setLoading(prev => ({ ...prev, checkIn: true }));
       const token = localStorage.getItem('token');
       console.log('Token for check-in:', token);
 
       const response = await axios.post('/api/attendance/checkin', {
-        employeeId: employee.employeeId
+        employeeId: employee.employeeId,
+        location
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -106,7 +141,7 @@ const EmployeeAttendance = ({ employee }) => {
         today: response.data
       }));
       
-      toast.success(`Checked in at ${new Date(response.data.checkIn.time).toLocaleTimeString()}`);
+      toast.success(`Checked in at ${new Date(response.data.checkIn.time).toLocaleTimeString()} from ${location.city}`);
     } catch (error) {
       console.error('Check-in error:', error.response?.data || error.message);
       toast.error(error.response?.data?.message || error.message);
@@ -122,14 +157,18 @@ const EmployeeAttendance = ({ employee }) => {
       return;
     }
 
-    console.log('Check Out button clicked for employee:', employee.employeeId);
     try {
+      // Fetch location first
+      const location = await fetchLocation();
+
+      console.log('Check Out button clicked for employee:', employee.employeeId);
       setLoading(prev => ({ ...prev, checkOut: true }));
       const token = localStorage.getItem('token');
       console.log('Token for check-out:', token);
 
       const response = await axios.post('/api/attendance/checkout', {
-        employeeId: employee.employeeId
+        employeeId: employee.employeeId,
+        location
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -143,7 +182,7 @@ const EmployeeAttendance = ({ employee }) => {
         )
       }));
       
-      toast.success(`Checked out at ${new Date(response.data.checkOut.time).toLocaleTimeString()}`);
+      toast.success(`Checked out at ${new Date(response.data.checkOut.time).toLocaleTimeString()} from ${location.city}`);
       setMotivatingMessage('Great job today! See you tomorrow! 🌟');
     } catch (error) {
       console.error('Check-out error:', error.response?.data || error.message);
@@ -187,10 +226,15 @@ const EmployeeAttendance = ({ employee }) => {
           <div className="space-y-2">
             <h3 className="font-medium text-sm sm:text-base">Check-in</h3>
             <p className="text-base sm:text-lg">
-              {attendanceData.today?.checkIn 
+              {attendanceData.today?.checkIn?.time 
                 ? new Date(attendanceData.today.checkIn.time).toLocaleTimeString()
                 : '--:--'}
             </p>
+            {attendanceData.today?.checkIn?.location?.city && (
+              <p className="text-xs sm:text-sm text-gray-500">
+                Location: {attendanceData.today.checkIn.location.city}
+              </p>
+            )}
           </div>
           
           <div className="space-y-2">
@@ -200,42 +244,46 @@ const EmployeeAttendance = ({ employee }) => {
                 ? new Date(attendanceData.today.checkOut.time).toLocaleTimeString()
                 : '--:--'}
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-medium text-sm sm:text-base">Time Spent</h3>
-            <p className="text-base sm:text-lg">
-              {attendanceData.today?.totalTimeSpent 
-                ? `${Math.floor(attendanceData.today.totalTimeSpent / 60)}h ${attendanceData.today.totalTimeSpent % 60}m`
-                : '--:--'}
-            </p>
+            {attendanceData.today?.checkOut?.location?.city && (
+              <p className="text-xs sm:text-sm text-gray-500">
+                Location: {attendanceData.today.checkOut.location.city}
+              </p>
+            )}
           </div>
         </div>
         
         <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-          {!attendanceData.today?.checkIn ? (
+          {!attendanceData.today?.checkIn?.time ? (
             <button
               onClick={handleCheckIn}
-              disabled={loading.checkIn || !employee?.employeeId}
+              disabled={loading.checkIn || loading.location || !employee?.employeeId}
               className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center text-sm sm:text-base"
             >
-              {loading.checkIn ? (
+              {loading.checkIn || loading.location ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Processing...
+                  {loading.location ? 'Fetching Location...' : 'Processing...'}
                 </>
               ) : 'Check In'}
             </button>
           ) : !attendanceData.today?.checkOut?.time ? (
             <button
               onClick={handleCheckOut}
-              disabled={loading.checkOut || !employee?.employeeId}
+              disabled={loading.checkOut || loading.location || !employee?.employeeId}
               className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center text-sm sm:text-base"
             >
-              {loading.checkOut ? 'Processing...' : 'Check Out'}
+              {loading.checkOut || loading.location ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {loading.location ? 'Fetching Location...' : 'Processing...'}
+                </>
+              ) : 'Check Out'}
             </button>
           ) : (
             <div className="text-center w-full sm:w-auto">
@@ -250,19 +298,9 @@ const EmployeeAttendance = ({ employee }) => {
 
       <div className="bg-white rounded-lg shadow p-3 sm:p-4">
         <h2 className="text-lg sm:text-xl font-semibold mb-4">Weekly Attendance</h2>
-      <p className="text-xs sm:text-sm text-gray-500 mb-4">
-  Color grades show punctuality:&nbsp;
-  <span className="inline-flex items-center mr-2">
-    <span className="w-2 h-2 rounded-full bg-green-500 mr-1"></span>On Time
-  </span>
-  <span className="inline-flex items-center mr-2">
-    <span className="w-2 h-2 rounded-full bg-yellow-400 mr-1"></span>Late
-  </span>
-  <span className="inline-flex items-center">
-    <span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span>Absent
-  </span>
-</p>
-
+        <p className="text-xs sm:text-sm text-gray-500 mb-4">
+          Color grades show punctuality (green = on time, yellow = late, red = absent)
+        </p>
         
         <div className="overflow-x-auto">
           <table className="min-w-[700px] divide-y divide-gray-200">
@@ -303,11 +341,17 @@ const EmployeeAttendance = ({ employee }) => {
                         {record ? (
                           <>
                             <p className="font-medium">
-                              {record.checkIn ? new Date(record.checkIn.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                              {record.checkIn?.time ? new Date(record.checkIn.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                             </p>
+                            {record.checkIn?.location?.city && (
+                              <p className="text-gray-600">({record.checkIn.location.city})</p>
+                            )}
                             <p>
                               {record.checkOut?.time ? new Date(record.checkOut.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                             </p>
+                            {record.checkOut?.location?.city && (
+                              <p className="text-gray-600">({record.checkOut.location.city})</p>
+                            )}
                             <p className="mt-1 font-medium">
                               {record.status} (Grade: {record.grade})
                             </p>

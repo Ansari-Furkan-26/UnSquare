@@ -4,12 +4,14 @@ import AppAuth from './Auth/AppAuth';
 import EmployeePanel from './Pages/EmployeePanel'; 
 import AdminDashboard from './Pages/AdminPanel';
 import AdminForm from './Pages/AdminForm';
+import Hero from './Pages/Hero';
 
 function App() {
   return (
     <AppContextProvider>
       <Router>
         <Routes>
+          <Route path="/" element={<Hero />} />
           <Route path="/login" element={<AppAuth />} />
           <Route path="/admin/employees" element={<AdminForm />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />

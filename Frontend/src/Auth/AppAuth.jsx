@@ -35,7 +35,7 @@ const AppAuth = () => {
         setisLoggedin(true);
         setuserData({ email: formData.email, role: 'admin' });
         toast.success('Admin login successful!');
-        navigate('/admin/employees');
+        navigate('/admin/dashboard');
         return;
       }
 
