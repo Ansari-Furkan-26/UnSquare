@@ -50,7 +50,7 @@ export default function Navbar() {
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded shadow-md z-10">
                    <button
-                    onClick={() => navigate('/employees')}
+                    onClick={() => navigate('/employees/profile')}
                     className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
                   >
                     Profile

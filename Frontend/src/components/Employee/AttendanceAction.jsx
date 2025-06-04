@@ -286,7 +286,7 @@ const EmployeeAttendance = ({ employee }) => {
               ) : 'Check Out'}
             </button>
           ) : (
-            <div className="text-center w-full sm:w-auto">
+            <div className=" w-full sm:w-auto">
               <p className="text-gray-500 text-sm sm:text-base">Attendance completed for today</p>
               {motivatingMessage && (
                 <p className="text-green-600 font-medium mt-2 text-sm sm:text-base">{motivatingMessage}</p>
@@ -298,9 +298,16 @@ const EmployeeAttendance = ({ employee }) => {
 
       <div className="bg-white rounded-lg shadow p-3 sm:p-4">
         <h2 className="text-lg sm:text-xl font-semibold mb-4">Weekly Attendance</h2>
-        <p className="text-xs sm:text-sm text-gray-500 mb-4">
-          Color grades show punctuality (green = on time, yellow = late, red = absent)
-        </p>
+       <p className="text-xs sm:text-sm text-gray-500 mb-4">
+        Color grades show punctuality:&nbsp;
+        <span className="inline-flex items-center mr-2">
+          <span className="w-2 h-2 rounded-full bg-yellow-400 mr-1"></span>Present
+        </span>
+        <span className="inline-flex items-center">
+          <span className="w-2 h-2 rounded-full bg-red-500 mr-1"></span>Absent
+        </span>
+      </p>
+
         
         <div className="overflow-x-auto">
           <table className="min-w-[700px] divide-y divide-gray-200">
@@ -353,13 +360,8 @@ const EmployeeAttendance = ({ employee }) => {
                               <p className="text-gray-600">({record.checkOut.location.city})</p>
                             )}
                             <p className="mt-1 font-medium">
-                              {record.status} (Grade: {record.grade})
+                              {record.status}
                             </p>
-                            {record.totalTimeSpent && (
-                              <p className="mt-1">
-                                Time: {Math.floor(record.totalTimeSpent / 60)}h {record.totalTimeSpent % 60}m
-                              </p>
-                            )}
                           </>
                         ) : (
                           <p className="text-gray-600">No record</p>

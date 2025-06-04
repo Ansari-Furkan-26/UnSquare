@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import EmployeeAttendance from '../components/Employee/AttendanceAction';
+import Navbar from '../components/Navbar';
 
 const EmployeeDashboard = () => {
   const [employee, setEmployee] = useState(null);
@@ -42,7 +43,7 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Welcome, {employee.name}</h1>
+      <Navbar />
       <EmployeeAttendance employee={employee} />
     </div>
   );

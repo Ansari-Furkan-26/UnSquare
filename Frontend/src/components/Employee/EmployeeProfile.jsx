@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../Navbar';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -43,6 +44,7 @@ const Profile = () => {
 
   return (
     <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+      <Navbar />
       <div className="bg-blue-600 p-6 text-white">
         <h1 className="text-2xl font-bold">{user.name}</h1>
         <p className="text-blue-100">{user.position} - {user.department}</p>
@@ -70,6 +72,7 @@ const Profile = () => {
             <p className="mt-1">{new Date(user.joinDate).toLocaleDateString()}</p>
           </div>
         </div>
+        <a href="/employees">Mark your attendance</a> 
       </div>
     </div>
   );
