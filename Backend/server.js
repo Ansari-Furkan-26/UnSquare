@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const employeeRoutes = require('./routes/employeeRoutes');
-const axios = require("axios");
+const authRoutes = require('./routes/authRoutes');
 
 // Load environment variables
 require('dotenv').config();
@@ -33,6 +33,7 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
 
 // Routes
 app.use('/api/employees', employeeRoutes);
+app.use('/api/auth', authRoutes);
 
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
