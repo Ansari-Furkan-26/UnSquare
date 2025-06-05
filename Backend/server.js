@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 // MongoDB Connection URI
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/UnSquare';
+const MONGODB_URI = process.env.MONGODB_URI;
 const allowedOrigin = ['http://localhost:5173'];
 
 // Middleware
