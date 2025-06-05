@@ -1,25 +1,37 @@
-# 👨‍💼 Employee Management System (MERN Stack)
+# 👨‍💼 Employee Attendance System (MERN Stack)
 
-A full-featured Employee Management System built using **MongoDB, Express, React, and Node.js**. It supports admin and employee roles with secure authentication, CRUD operations, and a modern UI.
+A full-featured Employee Attendance System built using **MongoDB, Express, React, and Node.js**. It supports admin and employee roles with secure authentication, location-based attendance logging, and performance grading.
 
 ---
 
-## 🌟 Features
+## 📝 Problem Statement
 
-### 🔐 Authentication & Roles
-- JWT-based login system
-- Role-based access: Admin and Employee
-- Password visibility toggle
+Build an attendance system where employees can **check in/check out based on location**, and admins can manage employees and monitor attendance effectively.
 
-### 🧑‍💼 Admin Panel
-- Create, update, delete employee records
-- View employee profiles
-- Manage user roles
+This system ensures:
+- Employees can only mark attendance **from a specific location** (e.g., office).
+- Admins have full control to **manage employees and view attendance reports**.
+- Employees are **visually graded** based on punctuality to promote on-time culture.
 
-### 👨‍💻 Employee Dashboard
-- Secure login
-- View and update profile
-- Personalized interface
+---
+
+## 🌟 Key Features
+
+### 🛠️ Admin Panel
+- ➕ Add, ✏️ Edit, and ❌ Delete employees
+- 📊 View employee attendance logs
+
+### 👨‍💻 Employee Panel
+- 🔐 Secure login
+- 📍 Location-based **Check In / Check Out**
+- 📆 View past attendance records
+
+### 🔐 Authentication
+- Simple JWT-based login for both Admin and Employee roles
+
+### 🟢 Attendance Grading System
+- Color-coded system (e.g., Green, Yellow, Red) to show punctuality performance
+- Motivates employees to be on time consistently
 
 ---
 
@@ -28,9 +40,11 @@ A full-featured Employee Management System built using **MongoDB, Express, React
 | Frontend        | Backend        | Database | Auth     | Others              |
 |----------------|----------------|----------|----------|---------------------|
 | React.js        | Node.js         | MongoDB  | JWT      | Axios, React Router |
-| React Toastify | Express.js      | Mongoose |           |                     |
+| React Toastify | Express.js      | Mongoose |          |             |
 
 ---
+
+## 🛠️ Local Setup
 
 ## 🛠️ Frontend Setup
 ```bash
