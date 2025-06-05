@@ -28,26 +28,19 @@ A full-featured Employee Management System built using **MongoDB, Express, React
 | Frontend        | Backend        | Database | Auth     | Others              |
 |----------------|----------------|----------|----------|---------------------|
 | React.js        | Node.js         | MongoDB  | JWT      | Axios, React Router |
-| React Toastify | Express.js      | Mongoose | Bcrypt   |                     |
+| React Toastify | Express.js      | Mongoose |           |                     |
 
 ---
 
-## 🧪 Test Credentials
-
-### 👑 Admin
-- 📧 **Email**: `admin@gmail.com`
-- 🔐 **Password**: `Admin@123`
-
-### 👤 Employee (emp1)
-- 📧 **Email**: `26furqan.ansari@gmail.com`
-- 🔐 **Password**: `Frontend@123`
-
----
-
-## 🛠️ Local Setup
+## 🛠️ Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ### 🔧 Backend Setup
 ```bash
 cd backend
 npm install
-npm run dev
+npm start
