@@ -225,12 +225,8 @@ const EmployeeManagement = () => {
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            aria-label="Search employees"
-          />
-          <Link
-            to="/admin/employees"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
+            aria-label="Search employees"/>
+          <Link to="/admin/employees" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
             Add Employee
           </Link>
         </div>
@@ -268,15 +264,13 @@ const EmployeeManagement = () => {
                       <button
                         onClick={() => handleEditClick(employee)}
                         className="text-indigo-600 hover:text-indigo-900 mr-4"
-                        aria-label="Edit employee"
-                      >
+                        aria-label="Edit employee">
                         <FaEdit />
                       </button>
                       <button
                         onClick={() => handleDelete(employee._id)}
                         className="text-red-600 hover:text-red-900"
-                        aria-label="Delete employee"
-                      >
+                        aria-label="Delete employee">
                         <FaTrash />
                       </button>
                     </td>
@@ -297,8 +291,7 @@ const EmployeeManagement = () => {
               <button
                 onClick={handleCloseModal}
                 className="text-gray-500 hover:text-gray-700"
-                aria-label="Close modal"
-              >
+                aria-label="Close modal">
                 <FaTimes />
               </button>
             </div>
@@ -314,8 +307,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.name ? 'border-red-500' : ''
                     }`}
-                    required
-                  />
+                    required/>
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
                 <div>
@@ -328,8 +320,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.email ? 'border-red-500' : ''
                     }`}
-                    required
-                  />
+                    required/>
                   {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                 </div>
                 <div>
@@ -342,8 +333,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.employeeId ? 'border-red-500' : ''
                     }`}
-                    required
-                  />
+                    required/>
                   {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId}</p>}
                 </div>
                 <div>
@@ -356,8 +346,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.position ? 'border-red-500' : ''
                     }`}
-                    required
-                  />
+                    required/>
                   {errors.position && <p className="text-red-500 text-sm mt-1">{errors.position}</p>}
                 </div>
                 <div>
@@ -369,8 +358,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.department ? 'border-red-500' : ''
                     }`}
-                    required
-                  >
+                    required>
                     <option value="">Select Department</option>
                     <option value="IT">IT</option>
                     <option value="HR">HR</option>
@@ -390,8 +378,7 @@ const EmployeeManagement = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.phone ? 'border-red-500' : ''
                     }`}
-                    required
-                  />
+                    required/>
                   {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
                 <div className="relative">
@@ -408,8 +395,7 @@ const EmployeeManagement = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-10 text-gray-500"
-                  >
+                    className="absolute right-3 top-10 text-gray-500">
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                   {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
@@ -423,13 +409,11 @@ const EmployeeManagement = () => {
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                       errors.confirmPassword ? 'border-red-500' : ''
-                    }`}
-                  />
+                    }`}/>
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-10 text-gray-500"
-                  >
+                    className="absolute right-3 top-10 text-gray-500">
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                   {errors.confirmPassword && (
@@ -443,8 +427,7 @@ const EmployeeManagement = () => {
                     value={formData.address}
                     onChange={(e) => handleChange(e)}
                     rows="3"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"/>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Join Date</label>
@@ -453,8 +436,7 @@ const EmployeeManagement = () => {
                     name="joinDate"
                     value={formData.joinDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Leaving Date (Optional)</label>
@@ -463,8 +445,7 @@ const EmployeeManagement = () => {
                     name="leavingDate"
                     value={formData.leavingDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                 </div>
               </div>
               <div className="mt-8">
@@ -472,15 +453,13 @@ const EmployeeManagement = () => {
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={formLoading}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  >
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
                     {formLoading ? 'Updating...' : 'Update Employee'}
                   </button>
                 </div>

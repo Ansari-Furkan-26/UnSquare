@@ -1,7 +1,6 @@
 import AdminSidebar from '../components/Admin/AdminSidebar';
 import EmployeeForm from '../components/Admin/EmployeeForm';
 
-
 const AdminLayout = () => {
   return (
     <div className="flex h-screen bg-gray-100">

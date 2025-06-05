@@ -7,8 +7,7 @@ export default function HeroSection() {
       style={{
         backgroundImage:
           "url('https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1470&q=80')",
-      }}
-    >
+      }}>
       {/* Fullscreen Black Overlay */}
       <div className="absolute inset-0 bg-black/60 bg-opacity-60 z-10" />
 
@@ -18,8 +17,7 @@ export default function HeroSection() {
           className="text-center max-w-2xl"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
+          transition={{ duration: 0.8 }}>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight">
             Smart Employee Attendance
           </h1>

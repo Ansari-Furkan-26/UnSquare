@@ -1,5 +1,5 @@
 import AdminSidebar from '../components/Admin/AdminSidebar';
-import EmployeeAttendance from '../components/Admin/EmployeeAttendance';
+import EmployeeAttendance from '../components/Admin/AdminAttendanceDashboard';
 import EmployeeManagement from '../components/Admin/EmployeeManagement';
 
 const AdminLayout = () => {

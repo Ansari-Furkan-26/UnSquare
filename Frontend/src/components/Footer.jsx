@@ -6,34 +6,26 @@ export default function Footer() {
           {/* Copyright and links */}
           <div className="mb-4 md:mb-0 text-center md:text-left">
             <p className="text-sm">
-              &copy; {new Date().getFullYear()} AttendPro. All rights reserved.
+              &copy; {new Date().getFullYear()} FrontendGenie. All rights reserved.
             </p>
           </div>
           
           {/* Footer links */}
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
-            <a 
-              href="#" 
-              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white"
-            >
+            <a href="#" 
+              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white">
               Privacy Policy
             </a>
-            <a 
-              href="#" 
-              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white"
-            >
+            <a href="#" 
+              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white">
               Terms & Conditions
             </a>
-            <a 
-              href="#" 
-              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white"
-            >
+            <a href="#" 
+              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white">
               Cookie Policy
             </a>
-            <a 
-              href="#" 
-              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white"
-            >
+            <a href="#" 
+              className="text-sm hover:text-white transition-colors underline underline-offset-4 decoration-transparent hover:decoration-white">
               Contact Us
             </a>
           </div>

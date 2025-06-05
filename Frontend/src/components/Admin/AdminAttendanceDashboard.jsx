@@ -8,8 +8,8 @@ const AdminAttendanceDashboard = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    start: new Date().toISOString().split('T')[0], // "2025-06-05"
+    end: new Date().toISOString().split('T')[0]   // "2025-06-05"
   });
   const navigate = useNavigate();
 
@@ -70,11 +70,14 @@ const AdminAttendanceDashboard = () => {
     return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Format total time spent
-  const formatTimeSpent = (minutes) => {
-    if (typeof minutes !== 'number' || minutes <= 0) return '--:--';
+  // Calculate time spent dynamically (checkOut - checkIn)
+  const calculateTimeSpent = (checkIn, checkOut) => {
+    if (!checkIn || !checkOut) return '--:--';
+    const diffMs = new Date(checkOut).getTime() - new Date(checkIn).getTime();
+    const minutes = Math.round(diffMs / (1000 * 60));
+    if (minutes <= 0) return '--:--';
     const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
+    const mins = minutes % 60;
     return `${hours}h ${mins}m`;
   };
 
@@ -89,6 +92,12 @@ const AdminAttendanceDashboard = () => {
         {status || 'N/A'}
       </span>
     );
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (e) => {
+    const { name, value } = e.target;
+    setDateRange((prev) => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
@@ -106,6 +115,31 @@ const AdminAttendanceDashboard = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Attendance</h1>
+
+      {/* Date Range Picker */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <input
+            type="date"
+            name="start"
+            value={dateRange.start}
+            onChange={handleDateRangeChange}
+            className="w-full sm:w-48 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex-1 mt-4 sm:mt-0">
+          <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <input
+            type="date"
+            name="end"
+            value={dateRange.end}
+            onChange={handleDateRangeChange}
+            className="w-full sm:w-48 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
       {/* Attendance Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {loading ? (
@@ -145,9 +179,11 @@ const AdminAttendanceDashboard = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                              <div className="text-sm text-gray-500">{employee.employeeId}</div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="text-sm text-gray-500">{employee.employeeId}</div>
                         </td>
                         <td colSpan="6" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           No attendance records in this period
@@ -168,9 +204,9 @@ const AdminAttendanceDashboard = () => {
                           </div>
                         </div>
                       </td>
-                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                       <div className="text-sm text-gray-500">{employee.employeeId}</div>
-                      </td>                       
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="text-sm text-gray-500">{employee.employeeId}</div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(attendance.date).toLocaleDateString()}
                       </td>
@@ -181,13 +217,16 @@ const AdminAttendanceDashboard = () => {
                         {formatTime(attendance.checkOut?.time)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatTimeSpent(attendance.totalTimeSpent)}
+                        {calculateTimeSpent(attendance.checkIn?.time, attendance.checkOut?.time)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(attendance.status)}
-                      </td>                     
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {attendance.grade || '--'}
+                      </td>
                     </tr>
-                  ));
+                  )); 
                 })}
               </tbody>
             </table>
